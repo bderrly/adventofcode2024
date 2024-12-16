@@ -23,6 +23,7 @@ func main() {
 	var right []int
 
 	input := inputSlice()
+	// input := testInput
 	for i := 0; i < len(input); i++ {
 		left = append(left, input[i][0])
 		right = append(right, input[i][1])
@@ -30,15 +31,26 @@ func main() {
 	sort.Ints(left)
 	sort.Ints(right)
 
-	var sum int
+	var distance int
 	for i := 0; i < len(input); i++ {
 		dist := left[i] - right[i]
 		if dist < 0 {
 			dist *= -1
 		}
-		sum += dist
+		distance += dist
 	}
-	fmt.Println(sum)
+	fmt.Println(distance)
+
+	rightCounts := map[int]int{0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0}
+	for _, r := range right {
+		rightCounts[r] += 1
+	}
+
+	var similarity int
+	for _, l := range left {
+		similarity += l * rightCounts[l]
+	}
+	fmt.Println(similarity)
 }
 
 func inputSlice() [][]int {
