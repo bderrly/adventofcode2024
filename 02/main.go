@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -19,42 +20,76 @@ var testInput = [][]int{
 	{1, 3, 6, 7, 9},
 }
 
-func main() {
-	// input := testInput
-	input := getInput()
+type Result struct {
+	s    []int
+	safe bool
+}
 
-	var results []bool
+func main() {
+	// input := testies
+	input := getInput()
+	// input := testInput
+
 	var safe int
 	for _, report := range input {
-		result := IsSafe(report)
+		revReport := make([]int, len(report))
+		copy(revReport, report)
+		slices.Reverse(revReport)
+		result := IsSafeDampened(-1, report) || IsSafeDampened(-1, revReport)
+		// result := IsSafe(report)
 		if result {
 			safe += 1
 		}
-		results = append(results, result)
+		fmt.Println(Result{report, result})
 	}
 	fmt.Println(safe)
 }
 
 func IsSafe(report []int) bool {
-	var inc bool = report[1]-report[0] > 0
+	if len(report) < 2 {
+		return true
+	}
+	return safeInc(report[0], report[1]) && IsSafe(report[1:])
+}
 
-	for i := 0; i < len(report)-1; i++ {
-		diff := report[i+1] - report[i]
-		if inc {
-			if diff <= 0 {
-				return false
-			} else if diff < 1 || diff > 3 {
-				return false
-			}
+var testies = [][]int{
+	// {4, 2, 4, 5, 6},    // P
+	// {2, 4, 4, 5, 6},    // P
+	// {2, 4, 4, 4, 5, 6}, // F
+	// {5, 4, 6, 7, 8, 9}, // P
+	// {5, 4, 3, 2, 3, 4}, // F
+	// {5, 4, 3, 3, 2},    // P
+	// {5, 4, 3, 3, 2, 3}, // F
+	// {5, 6, 2, 7},       // P
+	// {5, 6, 2, 7, 6},    // F
+	// {5, 6, 2, 7, 8}, // P
+	// {4, 4, 4, 4},       // F
+	// {4, 5, 5, 5},       // F
+	// {4, 5, 4, 5},       // F
+	// {4, 5, 4, 3, 2}, // P
+	// {6, 5, 6, 4, 3, 2},    // P
+	// {6, 5, 6, 5, 4, 3, 2}, // F
+	// {6, 5, 4, 3, 3},    // P
+	// {6, 5, 4, 3, 3, 3}, // F
+}
+
+func IsSafeDampened(prev int, report []int) bool {
+	if len(report) < 2 {
+		return true
+	}
+	if safeInc(report[0], report[1]) {
+		return IsSafeDampened(report[0], report[1:])
+	} else {
+		if prev == -1 {
+			return IsSafe(report[1:])
 		} else {
-			if diff >= 0 {
-				return false
-			} else if diff > -1 || diff < -3 {
-				return false
-			}
+			return IsSafe(append(append([]int{}, prev), report[1:]...)) || IsSafe(append(append([]int{}, report[0]), report[2:]...))
 		}
 	}
-	return true
+}
+
+func safeInc(a, b int) bool {
+	return a < b && b-a >= 1 && b-a <= 3
 }
 
 func getInput() [][]int {
