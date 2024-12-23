@@ -20,56 +20,45 @@ var testInput = [][]int{
 	{1, 3, 6, 7, 9},
 }
 
-type Result struct {
-	s    []int
-	safe bool
-}
-
 func main() {
-	input := getInput()
+	input := readInput()
 
 	var safe int
 	for _, report := range input {
 		revReport := make([]int, len(report))
 		copy(revReport, report)
 		slices.Reverse(revReport)
-		result := IsSafeDampened(-1, report) || IsSafeDampened(-1, revReport)
+		result := isSafeDampened([]int{}, report) || isSafeDampened([]int{}, revReport)
 		// result := IsSafe(report)  // part 1
 		if result {
 			safe += 1
 		}
-		fmt.Println(Result{report, result})
 	}
 	fmt.Println(safe)
 }
 
-func IsSafe(report []int) bool {
+func isSafe(report []int) bool {
 	if len(report) < 2 {
 		return true
 	}
-	return safeInc(report[0], report[1]) && IsSafe(report[1:])
+	return safeInc(report[0], report[1]) && isSafe(report[1:])
 }
 
-func IsSafeDampened(prev int, report []int) bool {
+func isSafeDampened(prev []int, report []int) bool {
 	if len(report) < 2 {
 		return true
 	}
 	if safeInc(report[0], report[1]) {
-		return IsSafeDampened(report[0], report[1:])
-	} else {
-		if prev == -1 {
-			return IsSafe(report[1:]) || IsSafe(append(append([]int{}, report[0]), report[2:]...))
-		} else {
-			return IsSafe(append(append([]int{}, prev), report[1:]...)) || IsSafe(append(append([]int{}, report[0]), report[2:]...))
-		}
+		return isSafeDampened([]int{report[0]}, report[1:])
 	}
+	return isSafe(append(prev, report[1:]...)) || isSafe(append([]int{report[0]}, report[2:]...))
 }
 
 func safeInc(a, b int) bool {
 	return a < b && b-a >= 1 && b-a <= 3
 }
 
-func getInput() [][]int {
+func readInput() [][]int {
 	ret := make([][]int, 0)
 
 	inFile, err := os.Open(inputFile)
@@ -81,14 +70,13 @@ func getInput() [][]int {
 	scLines := bufio.NewScanner(inFile)
 	for scLines.Scan() {
 		var report []int
-		scWords := bufio.NewScanner(strings.NewReader(scLines.Text()))
-		scWords.Split(bufio.ScanWords)
-		for scWords.Scan() {
-			val, err := strconv.ParseInt(scWords.Text(), 10, 32)
+		words := strings.Split(scLines.Text(), " ")
+		for _, word := range words {
+			level, err := strconv.Atoi(word)
 			if err != nil {
 				panic(err)
 			}
-			report = append(report, int(val))
+			report = append(report, level)
 		}
 		ret = append(ret, report)
 	}
