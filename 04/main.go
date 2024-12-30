@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 )
 
 var xmas []byte = []byte{'X', 'M', 'A', 'S'}
@@ -25,13 +26,17 @@ var (
 
 func main() {
 	graph := toGraph(readInput())
-	var total int
+	var total, totalX int
 	for x := 0; x < len(graph.Vertices); x++ {
 		for y := 0; y < len(graph.Vertices[x]); y++ {
 			total += graph.Search(point{x, y})
+			if graph.ValidSquare(point{x, y}) {
+				totalX++
+			}
 		}
 	}
 	fmt.Println(total)
+	fmt.Println(totalX)
 }
 
 type node struct {
@@ -85,6 +90,49 @@ func (g graph) Search(pt point) int {
 		}
 	}
 	return total
+}
+
+var validSquares = [][]byte{
+	{'M', 'S', 'M', 'S'},
+	{'M', 'M', 'S', 'S'},
+	{'S', 'M', 'S', 'M'},
+	{'S', 'S', 'M', 'M'},
+}
+
+func (g graph) ValidSquare(p point) (valid bool) {
+	sq := g.makeSquare(p)
+	if len(sq) != 9 {
+		return
+	}
+	if sq[len(sq)/2] != 'A' {
+		return
+	}
+	word := []byte{sq[0], sq[2], sq[6], sq[8]}
+	for _, v := range validSquares {
+		if slices.Compare(v, word) == 0 {
+			valid = true
+			break
+		}
+	}
+	return
+}
+
+func (g graph) makeSquare(p point) []byte {
+	square := make([]byte, 0, 9)
+	for x := -1; x < 2; x++ {
+		var col []byte
+		for y := -1; y < 2; y++ {
+			pt := point{p.X + x, p.Y + y}
+			if g.Node(pt) == nil {
+				break
+			}
+			col = append(col, g.Node(pt).Letter)
+		}
+		if len(col) == 3 {
+			square = append(square, col...)
+		}
+	}
+	return square
 }
 
 func (g graph) makeSlices(p point) [][]byte {
