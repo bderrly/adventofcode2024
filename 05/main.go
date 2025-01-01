@@ -10,62 +10,101 @@ import (
 	"unicode/utf8"
 )
 
-type orderRule struct {
-	First, Last int
-}
-
-type pageUpdates []int
+var orderingRules map[int][]int
 
 func main() {
-	var sum int
-	orderingRules, pages := readInput()
-	for _, page := range pages {
-		if validUpdate(orderingRules, page) {
-			sum += page[len(page)/2]
+	orderingRules = make(map[int][]int)
+
+	var sum, fixedSum int
+	pageUpdates := readInput()
+	for _, pageUpdate := range pageUpdates {
+		if validPageOrdering(pageUpdate) {
+			sum += pageUpdate[len(pageUpdate)/2]
+		} else {
+			fixedPage := fixPageOrdering(pageUpdate)
+			fixedSum += fixedPage[len(fixedPage)/2]
 		}
 	}
 	fmt.Println(sum)
+	fmt.Println(fixedSum)
 }
 
-func validUpdate(rules []orderRule, pages pageUpdates) bool {
-	for _, rule := range rules {
-		if slices.Contains(pages, rule.First) && slices.Contains(pages, rule.Last) {
-			if slices.Index(pages, rule.First) > slices.Index(pages, rule.Last) {
-				return false
+func fixPageOrdering(pages []int) []int {
+	updatedPages := make([]int, len(pages))
+	copy(updatedPages, pages)
+
+	var orderedUpdateRules []int
+	for k := range orderingRules {
+		orderedUpdateRules = append(orderedUpdateRules, k)
+	}
+	slices.Sort(orderedUpdateRules)
+
+	triggeredUpdates := make([][]int, 0)
+
+	for _, rule := range orderedUpdateRules {
+		for _, update := range orderingRules[rule] {
+			if slices.Contains(updatedPages, rule) && slices.Contains(updatedPages, update) {
+				ruleIdx := slices.Index(updatedPages, rule)
+				updateIdx := slices.Index(updatedPages, update)
+				if ruleIdx < updateIdx {
+					continue
+				}
+				triggeredUpdates = append(triggeredUpdates, []int{rule, update})
+				updatedPages = slices.Delete(updatedPages, ruleIdx, ruleIdx+1)
+				if updateIdx < 0 {
+					updateIdx = 0
+				}
+				updatedPages = slices.Insert(updatedPages, updateIdx, rule)
+			}
+		}
+	}
+	if !validPageOrdering(updatedPages) {
+		panic(fmt.Sprintf("fixed but invalid: %v", updatedPages))
+	}
+	return updatedPages
+}
+
+func validPageOrdering(pages []int) bool {
+	for k, vals := range orderingRules {
+		for _, val := range vals {
+			if slices.Contains(pages, k) && slices.Contains(pages, val) {
+				if slices.Index(pages, k) > slices.Index(pages, val) {
+					return false
+				}
 			}
 		}
 	}
 	return true
 }
 
-func readInput() ([]orderRule, []pageUpdates) {
+func readInput() [][]int {
 	inFile, err := os.Open("input.txt")
 	if err != nil {
 		panic(err)
 	}
 	defer inFile.Close()
 
-	var ordering []orderRule
-	var updates []pageUpdates
+	var updates [][]int
 
 	scan := bufio.NewScanner(inFile)
 	for scan.Scan() {
 		line := scan.Text()
 		if strings.Contains(line, "|") {
-			ordering = append(ordering, parseOrdering(line))
+			parseOrdering(line)
 		} else if strings.Contains(line, ",") {
 			updates = append(updates, parseUpdate(line))
 		}
 	}
-	return ordering, updates
+	return updates
 }
 
-func parseOrdering(line string) (rule orderRule) {
-	fmt.Sscanf(line, "%d|%d", &rule.First, &rule.Last)
-	return
+func parseOrdering(line string) {
+	var key, value int
+	fmt.Sscanf(line, "%d|%d", &key, &value)
+	orderingRules[key] = append(orderingRules[key], value)
 }
 
-func parseUpdate(line string) (update pageUpdates) {
+func parseUpdate(line string) (update []int) {
 	digitScanner := bufio.NewScanner(strings.NewReader(line))
 	digitScanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		start := 0
